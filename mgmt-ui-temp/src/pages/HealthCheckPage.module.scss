@@ -1,0 +1,333 @@
+.container {
+  display: grid;
+  gap: 20px;
+  color: var(--text-primary);
+}
+
+.header,
+.cardHeader,
+.switchRow,
+.metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actionGroup,
+.historyControl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pageTitle {
+  margin: 0;
+}
+
+.pageSubtitle {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.progressCard {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--success-color) 10%, var(--bg-primary)), color-mix(in srgb, var(--warning-color) 12%, var(--bg-primary)));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+  border-radius: 24px;
+  padding: 20px 24px;
+  display: grid;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.progressBar {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.progressValue {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--success-color), var(--warning-color));
+  transition: width 0.25s ease;
+}
+
+.progressMeta,
+.progressItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progressList {
+  display: grid;
+  gap: 8px;
+}
+
+.card {
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--warning-color) 12%, transparent), transparent 35%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-primary) 92%, white), var(--bg-primary));
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+}
+
+.metrics {
+  align-items: stretch;
+  margin-top: 18px;
+}
+
+.doughnutWrap {
+  display: grid;
+  place-items: center;
+  min-width: 180px;
+}
+
+.doughnut {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.doughnutInner {
+  width: 106px;
+  height: 106px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.doughnutInner strong {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.doughnutInner span,
+.lastRunText {
+  color: var(--text-secondary);
+}
+
+.metricList {
+  display: grid;
+  gap: 14px;
+  flex: 1;
+}
+
+.metricList div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.metricList span,
+.configList span {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.metricList strong {
+  font-size: 24px;
+  text-align: right;
+}
+
+.configList {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.configList div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.configList strong {
+  text-align: right;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.formGrid label {
+  display: grid;
+  gap: 8px;
+}
+
+.formGrid label span,
+.policyField span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.providerPolicies {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: grid;
+  gap: 12px;
+}
+
+.notificationSettings {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: grid;
+  gap: 12px;
+}
+
+.providerPoliciesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.providerPoliciesHeader h3 {
+  margin: 0;
+}
+
+.providerPoliciesHint {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.providerPoliciesList {
+  display: grid;
+  gap: 12px;
+}
+
+.providerPolicyRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-tertiary) 52%, transparent);
+}
+
+.providerName {
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.policyField {
+  display: grid;
+  gap: 8px;
+}
+
+.notificationGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.notificationCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-tertiary) 46%, transparent);
+}
+
+.notificationFields {
+  display: grid;
+  gap: 12px;
+}
+
+.tableWrap {
+  overflow: auto;
+  margin-top: 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--text-secondary);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusHealthy { background: color-mix(in srgb, var(--success-color) 16%, transparent); color: var(--success-color); }
+.statusUnauthorized { background: color-mix(in srgb, var(--error-color) 14%, transparent); color: var(--error-color); }
+.statusQuota { background: color-mix(in srgb, var(--warning-color) 18%, transparent); color: var(--warning-color); }
+.statusDisabled { background: color-mix(in srgb, var(--text-secondary) 14%, transparent); color: var(--text-secondary); }
+.statusError { background: color-mix(in srgb, var(--danger-color) 16%, transparent); color: var(--danger-color); }
+.statusSkipped { background: color-mix(in srgb, var(--info-color) 14%, transparent); color: var(--info-color); }
+
+.emptyCell {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 30px 12px;
+}
+
+@media (max-width: 768px) {
+  .header,
+  .cardHeader,
+  .metrics,
+  .providerPoliciesHeader,
+  .actionGroup,
+  .historyControl {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .doughnutWrap {
+    width: 100%;
+  }
+
+  .providerPolicyRow {
+    grid-template-columns: 1fr;
+  }
+}
