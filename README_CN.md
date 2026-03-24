@@ -64,6 +64,83 @@ CLIProxyAPI 用户手册： [https://help.router-for.me/](https://help.router-fo
 
 请参见 [MANAGEMENT_API_CN.md](https://help.router-for.me/cn/management/api)
 
+## Docker 镜像打包与服务器部署
+
+如果你想自己构建镜像并上传到服务器，可以直接使用仓库根目录下的打包脚本：
+
+```bash
+chmod +x docker-package.sh
+IMAGE_NAME=cli-proxy-api TAG=latest ./docker-package.sh
+```
+
+执行后会在 `dist/` 下生成镜像归档，例如 `dist/cli-proxy-api_latest.tar`。
+
+先把镜像归档和部署文件上传到服务器，例如：
+
+```bash
+scp dist/cli-proxy-api_latest.tar docker-compose.server.yml user@your-server:~/cliproxyapi/
+```
+
+服务器部署流程：
+
+```bash
+mkdir -p ~/cliproxyapi
+cd ~/cliproxyapi
+docker load -i cli-proxy-api_latest.tar
+docker compose -f docker-compose.server.yml up -d
+```
+
+首次启动时，容器会自动在挂载的配置目录里生成 `config/config.yaml`。你只需要按需修改这个文件，然后重启容器：
+
+```bash
+docker compose -f docker-compose.server.yml restart
+```
+
+默认持久化目录：
+
+- `./config`：配置文件目录，升级镜像后依然保留
+- `./data`：日志、管理面板静态资源以及其他运行期数据
+- `./auths`：OAuth/CLI 登录后的认证信息
+
+如果你只想在服务器上“给一个镜像地址就直接部署”，可以使用 [docker-deploy-remote.sh](/Users/zhangwei03/CLIProxyAPI/docker-deploy-remote.sh)：
+
+```bash
+chmod +x docker-deploy-remote.sh
+./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
+```
+
+这个脚本会自动完成：
+
+- 拉取镜像
+- 暴露 `8317`、`8085`、`1455`、`54545`、`51121`、`11451`
+- 创建 `~/cliproxyapi/config` 并把 `config.yaml` 持久化到这里
+- 创建 `~/cliproxyapi/data` 和 `~/cliproxyapi/auths`
+- 启动一个名为 `cli-proxy-api` 的容器
+
+如果服务器上已经有同名容器，需要覆盖部署：
+
+```bash
+RECREATE=1 ./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
+```
+
+如果你想把 `config.yaml` 和认证 token 存到 PostgreSQL：
+
+```bash
+export PGSTORE_DSN='postgresql://user:pass@postgres:5432/cliproxy'
+export PGSTORE_SCHEMA='public'
+./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
+```
+
+如果你想存到 MySQL：
+
+```bash
+export MYSQLSTORE_DSN='user:pass@tcp(mysql:3306)/cliproxy?parseTime=true&charset=utf8mb4'
+export MYSQLSTORE_DATABASE='cliproxy'
+./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
+```
+
+这两种方式都会把 `config` 和 `auth token` 以数据库为主存储，同时在容器内保留一个本地镜像目录供现有文件流程继续工作。
+
 ## Amp CLI 支持
 
 CLIProxyAPI 已内置对 [Amp CLI](https://ampcode.com) 和 Amp IDE 扩展的支持，可让你使用自己的 Google/ChatGPT/Claude OAuth 订阅来配合 Amp 编码工具：

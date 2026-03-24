@@ -64,6 +64,83 @@ CLIProxyAPI Guides: [https://help.router-for.me/](https://help.router-for.me/)
 
 see [MANAGEMENT_API.md](https://help.router-for.me/management/api)
 
+## Docker Image Packaging And Server Deployment
+
+If you want to build the image yourself and upload it to a server, use the packaging script in the repository root:
+
+```bash
+chmod +x docker-package.sh
+IMAGE_NAME=cli-proxy-api TAG=latest ./docker-package.sh
+```
+
+This creates an image archive under `dist/`, for example `dist/cli-proxy-api_latest.tar`.
+
+Upload the image archive and deployment file to the server first, for example:
+
+```bash
+scp dist/cli-proxy-api_latest.tar docker-compose.server.yml user@your-server:~/cliproxyapi/
+```
+
+Server-side deployment flow:
+
+```bash
+mkdir -p ~/cliproxyapi
+cd ~/cliproxyapi
+docker load -i cli-proxy-api_latest.tar
+docker compose -f docker-compose.server.yml up -d
+```
+
+On first start, the container automatically initializes `config/config.yaml` inside the mounted config directory. Edit that file as needed, then restart the container:
+
+```bash
+docker compose -f docker-compose.server.yml restart
+```
+
+Default persistent directories:
+
+- `./config`: config directory, preserved across image upgrades
+- `./data`: logs, management panel static assets, and other runtime data
+- `./auths`: OAuth/CLI authentication data
+
+If you want server deployment to be driven only by an image reference, use [docker-deploy-remote.sh](/Users/zhangwei03/CLIProxyAPI/docker-deploy-remote.sh):
+
+```bash
+chmod +x docker-deploy-remote.sh
+./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
+```
+
+The script automatically:
+
+- pulls the image
+- exposes `8317`, `8085`, `1455`, `54545`, `51121`, `11451`
+- creates `~/cliproxyapi/config` and persists `config.yaml` there
+- creates `~/cliproxyapi/data` and `~/cliproxyapi/auths`
+- starts a container named `cli-proxy-api`
+
+If the container already exists and you want to replace it:
+
+```bash
+RECREATE=1 ./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
+```
+
+If you want `config.yaml` and auth tokens stored in PostgreSQL:
+
+```bash
+export PGSTORE_DSN='postgresql://user:pass@postgres:5432/cliproxy'
+export PGSTORE_SCHEMA='public'
+./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
+```
+
+If you want them stored in MySQL:
+
+```bash
+export MYSQLSTORE_DSN='user:pass@tcp(mysql:3306)/cliproxy?parseTime=true&charset=utf8mb4'
+export MYSQLSTORE_DATABASE='cliproxy'
+./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
+```
+
+Both modes use the database as the source of truth for config and auth-token persistence while keeping a local mirrored workspace inside the container for the existing file-oriented flows.
+
 ## Amp CLI Support
 
 CLIProxyAPI includes integrated support for [Amp CLI](https://ampcode.com) and Amp IDE extensions, enabling you to use your Google/ChatGPT/Claude OAuth subscriptions with Amp's coding tools:

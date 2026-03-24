@@ -8,6 +8,7 @@ docker-compose.yml
 .gitignore
 .goreleaser.yml
 Dockerfile
+README_ZEABUR.md
 
 # Documentation and license
 docs/*
@@ -35,3 +36,5 @@ bin/*
 .bmad/*
 _bmad/*
 _bmad-output/*
+mgmt-ui-temp/node_modules/*
+mgmt-ui-temp/dist/*

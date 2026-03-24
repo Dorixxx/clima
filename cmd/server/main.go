@@ -136,6 +136,11 @@ func main() {
 		pgStoreSchema        string
 		pgStoreLocalPath     string
 		pgStoreInst          *store.PostgresStore
+		useMySQLStore        bool
+		mysqlStoreDSN        string
+		mysqlStoreDatabase   string
+		mysqlStoreLocalPath  string
+		mysqlStoreInst       *store.MySQLStore
 		useGitStore          bool
 		gitStoreRemoteURL    string
 		gitStoreUser         string
@@ -196,6 +201,26 @@ func main() {
 		}
 		useGitStore = false
 	}
+	if value, ok := lookupEnv("MYSQLSTORE_DSN", "mysqlstore_dsn"); ok {
+		useMySQLStore = true
+		mysqlStoreDSN = value
+	}
+	if useMySQLStore {
+		if value, ok := lookupEnv("MYSQLSTORE_DATABASE", "mysqlstore_database"); ok {
+			mysqlStoreDatabase = value
+		}
+		if value, ok := lookupEnv("MYSQLSTORE_LOCAL_PATH", "mysqlstore_local_path"); ok {
+			mysqlStoreLocalPath = value
+		}
+		if mysqlStoreLocalPath == "" {
+			if writableBase != "" {
+				mysqlStoreLocalPath = writableBase
+			} else {
+				mysqlStoreLocalPath = wd
+			}
+		}
+		useGitStore = false
+	}
 	if value, ok := lookupEnv("GITSTORE_GIT_URL", "gitstore_git_url"); ok {
 		useGitStore = true
 		gitStoreRemoteURL = value
@@ -234,7 +259,7 @@ func main() {
 	}
 
 	// Determine and load the configuration file.
-	// Prefer the Postgres store when configured, otherwise fallback to git or local files.
+	// Prefer the Postgres/MySQL store when configured, otherwise fallback to git or local files.
 	var configFilePath string
 	if usePostgresStore {
 		if pgStoreLocalPath == "" {
@@ -265,6 +290,36 @@ func main() {
 		if err == nil {
 			cfg.AuthDir = pgStoreInst.AuthDir()
 			log.Infof("postgres-backed token store enabled, workspace path: %s", pgStoreInst.WorkDir())
+		}
+	} else if useMySQLStore {
+		if mysqlStoreLocalPath == "" {
+			mysqlStoreLocalPath = wd
+		}
+		mysqlStoreLocalPath = filepath.Join(mysqlStoreLocalPath, "mysqlstore")
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		mysqlStoreInst, err = store.NewMySQLStore(ctx, store.MySQLStoreConfig{
+			DSN:      mysqlStoreDSN,
+			Database: mysqlStoreDatabase,
+			SpoolDir: mysqlStoreLocalPath,
+		})
+		cancel()
+		if err != nil {
+			log.Errorf("failed to initialize mysql token store: %v", err)
+			return
+		}
+		examplePath := filepath.Join(wd, "config.example.yaml")
+		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+		if errBootstrap := mysqlStoreInst.Bootstrap(ctx, examplePath); errBootstrap != nil {
+			cancel()
+			log.Errorf("failed to bootstrap mysql-backed config: %v", errBootstrap)
+			return
+		}
+		cancel()
+		configFilePath = mysqlStoreInst.ConfigPath()
+		cfg, err = config.LoadConfigOptional(configFilePath, isCloudDeploy)
+		if err == nil {
+			cfg.AuthDir = mysqlStoreInst.AuthDir()
+			log.Infof("mysql-backed token store enabled, workspace path: %s", mysqlStoreInst.WorkDir())
 		}
 	} else if useObjectStore {
 		if objectStoreLocalPath == "" {
@@ -396,6 +451,14 @@ func main() {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
+	if value, ok := lookupEnv(
+		"MANAGEMENT_PANEL_GITHUB_REPOSITORY",
+		"management_panel_github_repository",
+		"REMOTE_MANAGEMENT_PANEL_GITHUB_REPOSITORY",
+		"remote_management_panel_github_repository",
+	); ok {
+		cfg.RemoteManagement.PanelGitHubRepository = value
+	}
 
 	// In cloud deploy mode, check if we have a valid configuration
 	var configFileExists bool
@@ -447,6 +510,8 @@ func main() {
 	// Register the shared token store once so all components use the same persistence backend.
 	if usePostgresStore {
 		sdkAuth.RegisterTokenStore(pgStoreInst)
+	} else if useMySQLStore {
+		sdkAuth.RegisterTokenStore(mysqlStoreInst)
 	} else if useObjectStore {
 		sdkAuth.RegisterTokenStore(objectStoreInst)
 	} else if useGitStore {
