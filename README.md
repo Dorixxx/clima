@@ -131,12 +131,24 @@ export PGSTORE_SCHEMA='public'
 ./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
 ```
 
+With PostgreSQL enabled, the effective config path is consolidated to:
+
+```text
+~/cliproxyapi/data/pgstore/config/config.yaml
+```
+
 If you want them stored in MySQL:
 
 ```bash
 export MYSQLSTORE_DSN='user:pass@tcp(mysql:3306)/cliproxy?parseTime=true&charset=utf8mb4'
 export MYSQLSTORE_DATABASE='cliproxy'
 ./docker-deploy-remote.sh docker.io/your-dockerhub-user/cli-proxy-api:latest
+```
+
+With MySQL enabled, the effective config path is consolidated to:
+
+```text
+~/cliproxyapi/data/mysqlstore/config/config.yaml
 ```
 
 Both modes use the database as the source of truth for config and auth-token persistence while keeping a local mirrored workspace inside the container for the existing file-oriented flows.

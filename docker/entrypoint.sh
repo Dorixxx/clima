@@ -1,12 +1,20 @@
 #!/bin/sh
 set -eu
 
-config_path="${CLIPROXY_CONFIG_PATH:-/CLIProxyAPI/config/config.yaml}"
 template_path="${CLIPROXY_CONFIG_TEMPLATE:-/CLIProxyAPI/config.example.yaml}"
 builtin_management_path="${CLIPROXY_BUILTIN_MANAGEMENT_PATH:-/CLIProxyAPI/builtin/management.html}"
 management_asset_mode="${MANAGEMENT_BUNDLED_ASSET_MODE:-replace}"
-static_root="${WRITABLE_PATH:-/CLIProxyAPI/data}/static"
+config_base="${WRITABLE_PATH:-/CLIProxyAPI/data}"
+static_root="${config_base}/static"
 static_override="${MANAGEMENT_STATIC_PATH:-}"
+
+if [ -n "${PGSTORE_DSN:-}" ]; then
+  config_path="${PGSTORE_LOCAL_PATH:-${config_base}}/pgstore/config/config.yaml"
+elif [ -n "${MYSQLSTORE_DSN:-}" ]; then
+  config_path="${MYSQLSTORE_LOCAL_PATH:-${config_base}}/mysqlstore/config/config.yaml"
+else
+  config_path="${CLIPROXY_CONFIG_PATH:-/CLIProxyAPI/config/config.yaml}"
+fi
 
 if [ -n "${static_override}" ]; then
   case "${static_override}" in

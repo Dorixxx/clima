@@ -131,12 +131,24 @@ export PGSTORE_SCHEMA='public'
 ./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
 ```
 
+启用 PostgreSQL 后，实际使用的配置文件会收敛到：
+
+```text
+~/cliproxyapi/data/pgstore/config/config.yaml
+```
+
 如果你想存到 MySQL：
 
 ```bash
 export MYSQLSTORE_DSN='user:pass@tcp(mysql:3306)/cliproxy?parseTime=true&charset=utf8mb4'
 export MYSQLSTORE_DATABASE='cliproxy'
 ./docker-deploy-remote.sh docker.io/你的DockerHub用户名/cli-proxy-api:latest
+```
+
+启用 MySQL 后，实际使用的配置文件会收敛到：
+
+```text
+~/cliproxyapi/data/mysqlstore/config/config.yaml
 ```
 
 这两种方式都会把 `config` 和 `auth token` 以数据库为主存储，同时在容器内保留一个本地镜像目录供现有文件流程继续工作。

@@ -5,6 +5,7 @@ set -euo pipefail
 IMAGE_REF="${1:-${CLI_PROXY_IMAGE:-}}"
 BASE_DIR="${CLI_PROXY_BASE_DIR:-$HOME/cliproxyapi}"
 CONTAINER_NAME="${CLI_PROXY_CONTAINER_NAME:-cli-proxy-api}"
+sql_store_enabled=0
 
 if [[ -z "${IMAGE_REF}" ]]; then
   echo "Usage: $0 <image-ref>" >&2
@@ -12,9 +13,8 @@ if [[ -z "${IMAGE_REF}" ]]; then
   exit 1
 fi
 
-mkdir -p "${BASE_DIR}/config" "${BASE_DIR}/data" "${BASE_DIR}/auths"
-
 docker_env_args=()
+docker_volume_args=()
 append_env_arg() {
   local name="$1"
   local value="${!name:-}"
@@ -36,9 +36,21 @@ fi
 if [[ -n "${MYSQLSTORE_DSN:-}" && -z "${MYSQLSTORE_LOCAL_PATH:-}" ]]; then
   MYSQLSTORE_LOCAL_PATH=/CLIProxyAPI/data
 fi
+if [[ -n "${PGSTORE_DSN:-}" || -n "${MYSQLSTORE_DSN:-}" ]]; then
+  sql_store_enabled=1
+fi
 
 append_env_arg PGSTORE_LOCAL_PATH
 append_env_arg MYSQLSTORE_LOCAL_PATH
+
+mkdir -p "${BASE_DIR}/data" "${BASE_DIR}/auths"
+docker_volume_args+=(-v "${BASE_DIR}/data:/CLIProxyAPI/data")
+docker_volume_args+=(-v "${BASE_DIR}/auths:/root/.cli-proxy-api")
+
+if [[ "${sql_store_enabled}" != "1" ]]; then
+  mkdir -p "${BASE_DIR}/config"
+  docker_volume_args+=(-v "${BASE_DIR}/config:/CLIProxyAPI/config")
+fi
 
 if docker ps -a --format '{{.Names}}' | grep -Fxq "${CONTAINER_NAME}"; then
   echo "Container ${CONTAINER_NAME} already exists." >&2
@@ -65,13 +77,17 @@ docker run -d \
   -e WRITABLE_PATH=/CLIProxyAPI/data \
   -e CLIPROXY_CONFIG_PATH=/CLIProxyAPI/config/config.yaml \
   "${docker_env_args[@]}" \
-  -v "${BASE_DIR}/config:/CLIProxyAPI/config" \
-  -v "${BASE_DIR}/data:/CLIProxyAPI/data" \
-  -v "${BASE_DIR}/auths:/root/.cli-proxy-api" \
+  "${docker_volume_args[@]}" \
   "${IMAGE_REF}"
 
 echo
 echo "Container started: ${CONTAINER_NAME}"
-echo "Config path: ${BASE_DIR}/config/config.yaml"
+if [[ -n "${PGSTORE_DSN:-}" ]]; then
+  echo "Config path: ${BASE_DIR}/data/pgstore/config/config.yaml"
+elif [[ -n "${MYSQLSTORE_DSN:-}" ]]; then
+  echo "Config path: ${BASE_DIR}/data/mysqlstore/config/config.yaml"
+else
+  echo "Config path: ${BASE_DIR}/config/config.yaml"
+fi
 echo "Auth path: ${BASE_DIR}/auths"
 echo "API endpoint: http://$(hostname):${CLI_PROXY_PORT:-8317}"
