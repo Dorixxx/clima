@@ -3,6 +3,7 @@ package healthcheck
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime"
 	"net/http"
@@ -66,6 +67,7 @@ func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotification
 	}
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("User-Agent", "CLIProxyAPI-HealthCheck")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -80,32 +82,24 @@ func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotification
 }
 
 func barkRequest(ctx context.Context, endpoint string, title string, body string, group string) (*http.Request, error) {
-	parsed, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("invalid bark endpoint: %w", err)
-	}
-
 	title = strings.ToValidUTF8(strings.TrimSpace(title), "")
 	body = strings.ToValidUTF8(strings.TrimSpace(body), "")
 	group = strings.ToValidUTF8(strings.TrimSpace(group), "")
 
-	rawBasePath := strings.TrimRight(parsed.EscapedPath(), "/")
-	rawPushPath := rawBasePath + "/" + url.PathEscape(title) + "/" + url.PathEscape(body)
-	pushPath, err := url.PathUnescape(rawPushPath)
-	if err != nil {
-		return nil, fmt.Errorf("invalid bark path: %w", err)
+	payload := map[string]string{
+		"title": title,
+		"body":  body,
 	}
-
-	parsed.Path = pushPath
-	parsed.RawPath = rawPushPath
-
 	if group != "" {
-		query := parsed.Query()
-		query.Set("group", group)
-		parsed.RawQuery = query.Encode()
+		payload["group"] = group
 	}
 
-	return http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
+	rawBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(rawBody))
 }
 
 func barkEndpoint(cfg config.HealthCheckBarkNotificationConfig) (string, error) {

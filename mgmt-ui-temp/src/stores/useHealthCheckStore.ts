@@ -89,12 +89,28 @@ export const useHealthCheckStore = create<HealthCheckState>((set, get) => ({
     }
   },
   stopRun: async () => {
+    const snapshot = get().snapshot;
+    const currentRun = snapshot?.summary.current_run;
     set({ stopPending: true, error: null });
+    if (snapshot && currentRun && !currentRun.stopping) {
+      set({
+        snapshot: {
+          ...snapshot,
+          summary: {
+            ...snapshot.summary,
+            current_run: {
+              ...currentRun,
+              stopping: true
+            }
+          }
+        }
+      });
+    }
     try {
       const run = await healthCheckApi.stopRun();
-      set({ stopPending: false });
       get().startPolling();
       await get().fetchSnapshot();
+      set({ stopPending: false });
       return run.run;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop health check';
