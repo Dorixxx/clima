@@ -7,6 +7,8 @@ interface HealthCheckState {
   snapshot: HealthCheckSnapshot | null;
   loading: boolean;
   saving: boolean;
+  runPending: boolean;
+  stopPending: boolean;
   error: string | null;
   pollTimer: number | null;
   fetchSnapshot: () => Promise<HealthCheckSnapshot>;
@@ -41,10 +43,13 @@ export const useHealthCheckStore = create<HealthCheckState>((set, get) => ({
   snapshot: null,
   loading: false,
   saving: false,
+  runPending: false,
+  stopPending: false,
   error: null,
   pollTimer: null,
   fetchSnapshot: async () => {
-    set({ loading: true, error: null });
+    const shouldShowLoading = get().snapshot === null;
+    set({ loading: shouldShowLoading, error: null });
     try {
       const snapshot = await healthCheckApi.getSnapshot();
       set({ snapshot, loading: false });
@@ -70,30 +75,30 @@ export const useHealthCheckStore = create<HealthCheckState>((set, get) => ({
     }
   },
   runNow: async () => {
-    set({ saving: true, error: null });
+    set({ runPending: true, error: null });
     try {
       const run = await healthCheckApi.runNow();
-      set({ saving: false });
+      set({ runPending: false });
       get().startPolling();
       await get().fetchSnapshot();
       return run.run;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to run health check';
-      set({ saving: false, error: message });
+      set({ runPending: false, error: message });
       throw error;
     }
   },
   stopRun: async () => {
-    set({ saving: true, error: null });
+    set({ stopPending: true, error: null });
     try {
       const run = await healthCheckApi.stopRun();
-      set({ saving: false });
+      set({ stopPending: false });
       get().startPolling();
       await get().fetchSnapshot();
       return run.run;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to stop health check';
-      set({ saving: false, error: message });
+      set({ stopPending: false, error: message });
       throw error;
     }
   },

@@ -29,7 +29,7 @@ export function HealthCheckPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { showNotification } = useNotificationStore();
-  const { snapshot, loading, saving, fetchSnapshot, runNow, stopRun } = useHealthCheckStore();
+  const { snapshot, loading, saving, runPending, stopPending, fetchSnapshot, runNow, stopRun } = useHealthCheckStore();
   const [selectedRunId, setSelectedRunId] = useState('');
 
   useEffect(() => {
@@ -98,18 +98,20 @@ export function HealthCheckPage() {
           <p className={styles.pageSubtitle}>{t('health_check.subtitle')}</p>
         </div>
         <div className={styles.actionGroup}>
-          <Button variant="secondary" onClick={() => navigate('/config')} disabled={saving}>
+          <Button variant="secondary" onClick={() => navigate('/config')} disabled={saving || runPending || stopPending}>
             {t('health_check.open_config')}
           </Button>
-          {summary?.running ? (
-            <Button variant="danger" onClick={handleStop} loading={saving} disabled={loading || currentRun?.stopping}>
-              {currentRun?.stopping ? t('health_check.stopping') : t('health_check.stop')}
-            </Button>
-          ) : (
-            <Button onClick={handleRunNow} loading={saving} disabled={loading}>
-              {t('health_check.run_now')}
-            </Button>
-          )}
+          <Button
+            variant="danger"
+            onClick={handleStop}
+            loading={stopPending}
+            disabled={!currentRun || Boolean(currentRun.stopping)}
+          >
+            {currentRun?.stopping || stopPending ? t('health_check.stopping') : t('health_check.stop')}
+          </Button>
+          <Button onClick={handleRunNow} loading={runPending} disabled={Boolean(currentRun) || stopPending}>
+            {t('health_check.run_now')}
+          </Button>
         </div>
       </div>
 
