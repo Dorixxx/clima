@@ -3,7 +3,6 @@ package healthcheck
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"mime"
 	"net/http"
@@ -67,7 +66,6 @@ func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotification
 	}
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req.Header.Set("User-Agent", "CLIProxyAPI-HealthCheck")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -82,24 +80,38 @@ func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotification
 }
 
 func barkRequest(ctx context.Context, endpoint string, title string, body string, group string) (*http.Request, error) {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid bark endpoint: %w", err)
+	}
+
 	title = strings.ToValidUTF8(strings.TrimSpace(title), "")
 	body = strings.ToValidUTF8(strings.TrimSpace(body), "")
 	group = strings.ToValidUTF8(strings.TrimSpace(group), "")
 
-	payload := map[string]string{
-		"title": title,
-		"body":  body,
+	escapedBasePath := strings.TrimRight(parsed.EscapedPath(), "/")
+	escapedPushPath := escapedBasePath
+	if title != "" {
+		escapedPushPath += "/" + url.PathEscape(title)
 	}
-	if group != "" {
-		payload["group"] = group
+	if body != "" {
+		escapedPushPath += "/" + url.PathEscape(body)
 	}
 
-	rawBody, err := json.Marshal(payload)
+	pushPath, err := url.PathUnescape(escapedPushPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid bark push path: %w", err)
+	}
+	parsed.Path = pushPath
+	parsed.RawPath = escapedPushPath
+
+	if group != "" {
+		query := parsed.Query()
+		query.Set("group", group)
+		parsed.RawQuery = query.Encode()
 	}
 
-	return http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(rawBody))
+	return http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
 }
 
 func barkEndpoint(cfg config.HealthCheckBarkNotificationConfig) (string, error) {
@@ -185,14 +197,12 @@ func sendEmailNotification(ctx context.Context, cfg config.HealthCheckEmailNotif
 }
 
 func barkNotificationMessage(run RunResult, isTest bool) (string, string) {
-	title := "健康检查完成"
+	title := "健康检查结果"
 	switch {
 	case isTest:
 		title = "Bark 测试推送"
 	case run.Stopped:
 		title = "健康检查已停止"
-	case run.Unauthorized > 0 || run.ZeroQuota > 0 || run.Errors > 0:
-		title = "健康检查发现异常"
 	}
 
 	lines := []string{

@@ -580,17 +580,6 @@ func (c *Checker) applyUnauthorizedAction(ctx context.Context, cfg *config.Confi
 	case "ignore":
 		return ActionIgnored
 	case "delete":
-		if !shouldDeleteUnauthorizedAuth(auth) {
-			auth.Disabled = true
-			auth.Status = coreauth.StatusDisabled
-			auth.StatusMessage = unauthorizedDisabledStatusMessage(auth)
-			auth.UpdatedAt = time.Now().UTC()
-			if _, err := manager.Update(ctx, auth); err != nil {
-				log.WithError(err).Warn("health check failed to disable unauthorized auth")
-				return ActionNone
-			}
-			return ActionDisabled
-		}
 		if err := manager.Delete(ctx, auth.ID); err != nil {
 			log.WithError(err).Warn("health check failed to delete unauthorized auth")
 			return ActionNone
@@ -681,16 +670,6 @@ func isUnauthorized(auth *coreauth.Auth, err error) bool {
 		}
 	}
 	return false
-}
-
-func shouldDeleteUnauthorizedAuth(auth *coreauth.Auth) bool {
-	msg := unauthorizedAuthMessage(auth)
-	if msg == "" {
-		return false
-	}
-
-	return strings.Contains(msg, "authentication token has been invalidated") ||
-		strings.Contains(msg, "token has been invalidated")
 }
 
 func unauthorizedAuthMessage(auth *coreauth.Auth) string {

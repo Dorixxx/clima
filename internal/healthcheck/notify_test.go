@@ -2,12 +2,12 @@ package healthcheck
 
 import (
 	"context"
-	"encoding/json"
-	"io"
+	"net/http"
+	"net/url"
 	"testing"
 )
 
-func TestBarkRequestUsesNormalizedJSONPayload(t *testing.T) {
+func TestBarkRequestUsesShortcutURLFormat(t *testing.T) {
 	t.Parallel()
 
 	title := "健康检查发现异常"
@@ -25,31 +25,16 @@ func TestBarkRequestUsesNormalizedJSONPayload(t *testing.T) {
 		t.Fatalf("barkRequest returned error: %v", err)
 	}
 
-	if req.Method != "POST" {
+	if req.Method != http.MethodGet {
 		t.Fatalf("unexpected request method: %s", req.Method)
 	}
 
-	if req.URL.String() != "https://api.day.app/23bG294rw9KeaQ3nzHU5NU" {
-		t.Fatalf("unexpected request url: %s", req.URL.String())
+	wantPath := "/" + "23bG294rw9KeaQ3nzHU5NU" + "/" + url.PathEscape(title) + "/" + url.PathEscape(body)
+	if req.URL.EscapedPath() != wantPath {
+		t.Fatalf("unexpected request path:\nwant: %s\ngot:  %s", wantPath, req.URL.EscapedPath())
 	}
 
-	rawBody, err := io.ReadAll(req.Body)
-	if err != nil {
-		t.Fatalf("failed to read request body: %v", err)
-	}
-
-	var payload map[string]string
-	if err := json.Unmarshal(rawBody, &payload); err != nil {
-		t.Fatalf("failed to decode request body: %v", err)
-	}
-
-	if payload["title"] != title {
-		t.Fatalf("unexpected bark title: %q", payload["title"])
-	}
-	if payload["body"] != body {
-		t.Fatalf("unexpected bark body: %q", payload["body"])
-	}
-	if payload["group"] != group {
-		t.Fatalf("unexpected bark group: %q", payload["group"])
+	if req.URL.Query().Get("group") != group {
+		t.Fatalf("unexpected bark group: %q", req.URL.Query().Get("group"))
 	}
 }
