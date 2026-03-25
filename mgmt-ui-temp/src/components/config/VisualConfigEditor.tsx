@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -70,7 +71,9 @@ interface VisualConfigEditorProps {
   validationErrors?: VisualConfigValidationErrors;
   hasPayloadValidationErrors?: boolean;
   disabled?: boolean;
+  barkTesting?: boolean;
   onChange: (values: Partial<VisualConfigValues>) => void;
+  onTestBark?: (value: { enabled?: boolean; url?: string; group?: string }) => void;
 }
 
 function getValidationMessage(
@@ -141,6 +144,7 @@ function FieldShell({
   hintId,
   error,
   errorId,
+  className,
   children,
 }: {
   label: string;
@@ -150,10 +154,11 @@ function FieldShell({
   hintId?: string;
   error?: string;
   errorId?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className={styles.fieldShell}>
+    <div className={`${styles.fieldShell} ${className ?? ''}`.trim()}>
       <label id={labelId} htmlFor={htmlFor} className={styles.fieldLabel}>
         {label}
       </label>
@@ -179,7 +184,9 @@ export function VisualConfigEditor({
   validationErrors,
   hasPayloadValidationErrors = false,
   disabled = false,
+  barkTesting = false,
   onChange,
+  onTestBark,
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -952,7 +959,10 @@ export function VisualConfigEditor({
                     disabled={disabled}
                     error={healthCheckParallelismError}
                   />
-                  <FieldShell label={t('health_check.unauthorized_action')}>
+                  <FieldShell
+                    label={t('health_check.unauthorized_action')}
+                    className={styles.fieldShellWide}
+                  >
                     <Select
                       value={values.healthCheck.unauthorizedAction}
                       options={[
@@ -977,7 +987,10 @@ export function VisualConfigEditor({
                       }
                     />
                   </FieldShell>
-                  <FieldShell label={t('health_check.zero_quota_action')}>
+                  <FieldShell
+                    label={t('health_check.zero_quota_action')}
+                    className={styles.fieldShellWide}
+                  >
                     <Select
                       value={values.healthCheck.zeroQuotaAction}
                       options={[
@@ -1037,32 +1050,16 @@ export function VisualConfigEditor({
                   />
                   <SectionGrid>
                     <Input
-                      label={t('health_check.bark_server_url')}
-                      placeholder="https://api.day.app"
-                      value={values.healthCheck.notifications.barkServerUrl}
+                      label={t('health_check.bark_url')}
+                      placeholder="https://api.day.app/your_device_key"
+                      value={values.healthCheck.notifications.barkUrl}
                       onChange={(e) =>
                         onChange({
                           healthCheck: {
                             ...values.healthCheck,
                             notifications: {
                               ...values.healthCheck.notifications,
-                              barkServerUrl: e.target.value,
-                            },
-                          },
-                        })
-                      }
-                      disabled={disabled}
-                    />
-                    <Input
-                      label={t('health_check.bark_device_key')}
-                      value={values.healthCheck.notifications.barkDeviceKey}
-                      onChange={(e) =>
-                        onChange({
-                          healthCheck: {
-                            ...values.healthCheck,
-                            notifications: {
-                              ...values.healthCheck.notifications,
-                              barkDeviceKey: e.target.value,
+                              barkUrl: e.target.value,
                             },
                           },
                         })
@@ -1086,6 +1083,21 @@ export function VisualConfigEditor({
                       disabled={disabled}
                     />
                   </SectionGrid>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      onTestBark?.({
+                        enabled: values.healthCheck.notifications.barkEnabled,
+                        url: values.healthCheck.notifications.barkUrl,
+                        group: values.healthCheck.notifications.barkGroup,
+                      })
+                    }
+                    loading={barkTesting}
+                    disabled={disabled || !values.healthCheck.notifications.barkUrl.trim()}
+                  >
+                    {t('health_check.bark_test')}
+                  </Button>
 
                   <ToggleRow
                     title={t('health_check.email_notification')}

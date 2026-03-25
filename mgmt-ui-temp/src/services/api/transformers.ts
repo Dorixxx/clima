@@ -94,6 +94,27 @@ const normalizePrefix = (value: unknown): string | undefined => {
   return trimmed ? trimmed : undefined;
 };
 
+const normalizeBarkUrl = (value: {
+  url?: unknown;
+  serverUrl?: unknown;
+  deviceKey?: unknown;
+}): string | undefined => {
+  const url = typeof value.url === 'string' ? value.url.trim() : '';
+  if (url) {
+    return url;
+  }
+
+  const serverUrl =
+    typeof value.serverUrl === 'string' ? value.serverUrl.trim().replace(/\/+$/, '') : '';
+  const deviceKey =
+    typeof value.deviceKey === 'string' ? value.deviceKey.trim().replace(/^\/+|\/+$/g, '') : '';
+  if (!serverUrl || !deviceKey) {
+    return undefined;
+  }
+
+  return `${serverUrl}/${deviceKey}`;
+};
+
 const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   if (entry === undefined || entry === null) return null;
   const record = isRecord(entry) ? entry : null;
@@ -437,6 +458,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           bark: isRecord(notificationsRaw.bark)
             ? {
                 enabled: normalizeBoolean(notificationsRaw.bark.enabled),
+                url: normalizeBarkUrl({
+                  url: notificationsRaw.bark.url,
+                  serverUrl: notificationsRaw.bark['server-url'] ?? notificationsRaw.bark.serverUrl,
+                  deviceKey: notificationsRaw.bark['device-key'] ?? notificationsRaw.bark.deviceKey
+                }),
                 serverUrl:
                   typeof notificationsRaw.bark['server-url'] === 'string'
                     ? notificationsRaw.bark['server-url']

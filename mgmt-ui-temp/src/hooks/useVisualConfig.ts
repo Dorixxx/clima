@@ -161,6 +161,25 @@ function parseHealthCheckProviderPolicies(raw: unknown): VisualHealthCheckProvid
   });
 }
 
+function buildBarkUrl(raw: Record<string, unknown> | null): string {
+  if (!raw) return '';
+
+  const url = typeof raw.url === 'string' ? raw.url.trim() : '';
+  if (url) return url;
+
+  const serverUrl =
+    typeof raw['server-url'] === 'string'
+      ? raw['server-url'].trim().replace(/\/+$/, '')
+      : '';
+  const deviceKey =
+    typeof raw['device-key'] === 'string'
+      ? raw['device-key'].trim().replace(/^\/+|\/+$/g, '')
+      : '';
+  if (!serverUrl || !deviceKey) return '';
+
+  return `${serverUrl}/${deviceKey}`;
+}
+
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
@@ -564,10 +583,7 @@ export function useVisualConfig() {
           providerPolicies: parseHealthCheckProviderPolicies(healthCheck?.['provider-policies']),
           notifications: {
             barkEnabled: Boolean(barkNotifications?.enabled),
-            barkServerUrl:
-              typeof barkNotifications?.['server-url'] === 'string' ? barkNotifications['server-url'] : '',
-            barkDeviceKey:
-              typeof barkNotifications?.['device-key'] === 'string' ? barkNotifications['device-key'] : '',
+            barkUrl: buildBarkUrl(barkNotifications),
             barkGroup: typeof barkNotifications?.group === 'string' ? barkNotifications.group : '',
             emailEnabled: Boolean(emailNotifications?.enabled),
             emailSmtpHost:
@@ -708,8 +724,7 @@ export function useVisualConfig() {
           values.healthCheck.providerPolicies.length > 0 ||
           values.healthCheck.notifications.barkEnabled ||
           values.healthCheck.notifications.emailEnabled ||
-          values.healthCheck.notifications.barkServerUrl.trim() ||
-          values.healthCheck.notifications.barkDeviceKey.trim() ||
+          values.healthCheck.notifications.barkUrl.trim() ||
           values.healthCheck.notifications.barkGroup.trim() ||
           values.healthCheck.notifications.emailSmtpHost.trim() ||
           values.healthCheck.notifications.emailSmtpPort.trim() ||
@@ -764,8 +779,7 @@ export function useVisualConfig() {
           const hasNotifications =
             notifications.barkEnabled ||
             notifications.emailEnabled ||
-            notifications.barkServerUrl.trim() ||
-            notifications.barkDeviceKey.trim() ||
+            notifications.barkUrl.trim() ||
             notifications.barkGroup.trim() ||
             notifications.emailSmtpHost.trim() ||
             notifications.emailSmtpPort.trim() ||
@@ -785,19 +799,20 @@ export function useVisualConfig() {
             );
             setStringInDoc(
               doc,
-              ['health-check', 'notifications', 'bark', 'server-url'],
-              notifications.barkServerUrl
-            );
-            setStringInDoc(
-              doc,
-              ['health-check', 'notifications', 'bark', 'device-key'],
-              notifications.barkDeviceKey
+              ['health-check', 'notifications', 'bark', 'url'],
+              notifications.barkUrl
             );
             setStringInDoc(
               doc,
               ['health-check', 'notifications', 'bark', 'group'],
               notifications.barkGroup
             );
+            if (docHas(doc, ['health-check', 'notifications', 'bark', 'server-url'])) {
+              doc.deleteIn(['health-check', 'notifications', 'bark', 'server-url']);
+            }
+            if (docHas(doc, ['health-check', 'notifications', 'bark', 'device-key'])) {
+              doc.deleteIn(['health-check', 'notifications', 'bark', 'device-key']);
+            }
             deleteIfMapEmpty(doc, ['health-check', 'notifications', 'bark']);
 
             ensureMapInDoc(doc, ['health-check', 'notifications', 'email']);

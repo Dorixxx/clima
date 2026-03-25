@@ -65,6 +65,9 @@ const BATCH_BAR_BASE_TRANSFORM = 'translateX(-50%)';
 const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
+const DEFAULT_UPLOAD_CONCURRENCY = 4;
+const MIN_UPLOAD_CONCURRENCY = 1;
+const MAX_UPLOAD_CONCURRENCY = 16;
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -85,6 +88,10 @@ export function AuthFilesPage() {
     compact: DEFAULT_COMPACT_PAGE_SIZE,
   });
   const [pageSizeInput, setPageSizeInput] = useState('9');
+  const [uploadConcurrency, setUploadConcurrency] = useState(DEFAULT_UPLOAD_CONCURRENCY);
+  const [uploadConcurrencyInput, setUploadConcurrencyInput] = useState(
+    String(DEFAULT_UPLOAD_CONCURRENCY)
+  );
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
@@ -120,7 +127,7 @@ export function AuthFilesPage() {
     batchDownload,
     batchSetStatus,
     batchDelete,
-  } = useAuthFilesData({ refreshKeyStats });
+  } = useAuthFilesData({ refreshKeyStats, uploadConcurrency });
 
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
 
@@ -210,6 +217,17 @@ export function AuthFilesPage() {
       regular: regularPageSize,
       compact: compactPageSize,
     });
+    if (
+      typeof persisted.uploadConcurrency === 'number' &&
+      Number.isFinite(persisted.uploadConcurrency)
+    ) {
+      const nextUploadConcurrency = Math.min(
+        MAX_UPLOAD_CONCURRENCY,
+        Math.max(MIN_UPLOAD_CONCURRENCY, Math.round(persisted.uploadConcurrency))
+      );
+      setUploadConcurrency(nextUploadConcurrency);
+      setUploadConcurrencyInput(String(nextUploadConcurrency));
+    }
     if (isAuthFilesSortMode(persisted.sortMode)) {
       setSortMode(persisted.sortMode);
     }
@@ -225,13 +243,18 @@ export function AuthFilesPage() {
       pageSize,
       regularPageSize: pageSizeByMode.regular,
       compactPageSize: pageSizeByMode.compact,
+      uploadConcurrency,
       sortMode,
     });
-  }, [filter, problemOnly, compactMode, search, page, pageSize, pageSizeByMode, sortMode]);
+  }, [filter, problemOnly, compactMode, search, page, pageSize, pageSizeByMode, sortMode, uploadConcurrency]);
 
   useEffect(() => {
     setPageSizeInput(String(pageSize));
   }, [pageSize]);
+
+  useEffect(() => {
+    setUploadConcurrencyInput(String(uploadConcurrency));
+  }, [uploadConcurrency]);
 
   const setCurrentModePageSize = useCallback(
     (next: number) => {
@@ -261,6 +284,27 @@ export function AuthFilesPage() {
     setPage(1);
   };
 
+  const commitUploadConcurrencyInput = (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+      setUploadConcurrencyInput(String(uploadConcurrency));
+      return;
+    }
+
+    const value = Number(trimmed);
+    if (!Number.isFinite(value)) {
+      setUploadConcurrencyInput(String(uploadConcurrency));
+      return;
+    }
+
+    const next = Math.min(
+      MAX_UPLOAD_CONCURRENCY,
+      Math.max(MIN_UPLOAD_CONCURRENCY, Math.round(value))
+    );
+    setUploadConcurrency(next);
+    setUploadConcurrencyInput(String(next));
+  };
+
   const handlePageSizeChange = (event: ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.currentTarget.value;
     setPageSizeInput(rawValue);
@@ -276,6 +320,22 @@ export function AuthFilesPage() {
 
     setCurrentModePageSize(rounded);
     setPage(1);
+  };
+
+  const handleUploadConcurrencyChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.currentTarget.value;
+    setUploadConcurrencyInput(rawValue);
+
+    const trimmed = rawValue.trim();
+    if (!trimmed) return;
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) return;
+
+    const rounded = Math.round(parsed);
+    if (rounded < MIN_UPLOAD_CONCURRENCY || rounded > MAX_UPLOAD_CONCURRENCY) return;
+
+    setUploadConcurrency(rounded);
   };
 
   const handleSortModeChange = useCallback(
@@ -735,6 +795,24 @@ export function AuthFilesPage() {
                     onChange={handleSortModeChange}
                     ariaLabel={t('auth_files.sort_label')}
                     fullWidth
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>{t('auth_files.upload_parallelism_label')}</label>
+                  <input
+                    className={styles.pageSizeSelect}
+                    type="number"
+                    min={MIN_UPLOAD_CONCURRENCY}
+                    max={MAX_UPLOAD_CONCURRENCY}
+                    step={1}
+                    value={uploadConcurrencyInput}
+                    onChange={handleUploadConcurrencyChange}
+                    onBlur={(e) => commitUploadConcurrencyInput(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
                   />
                 </div>
                 <div className={`${styles.filterItem} ${styles.filterToggleItem}`}>

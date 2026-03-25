@@ -70,7 +70,9 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
+  min-width: max(100%, 220px);
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
   z-index: 1000;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);

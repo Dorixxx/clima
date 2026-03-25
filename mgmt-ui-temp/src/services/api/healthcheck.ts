@@ -9,6 +9,7 @@ type ProviderPolicy = {
 type HealthCheckNotifications = {
   bark?: {
     enabled?: boolean;
+    url?: string;
     serverUrl?: string;
     deviceKey?: string;
     group?: string;
@@ -49,6 +50,25 @@ const normalizeProviderPolicies = (value: unknown): Record<string, ProviderPolic
   return Object.fromEntries(entries);
 };
 
+const buildBarkUrl = (value: {
+  url?: string;
+  serverUrl?: string;
+  deviceKey?: string;
+}): string | undefined => {
+  const url = value.url?.trim();
+  if (url) {
+    return url;
+  }
+
+  const serverUrl = value.serverUrl?.trim().replace(/\/+$/, '');
+  const deviceKey = value.deviceKey?.trim().replace(/^\/+|\/+$/g, '');
+  if (!serverUrl || !deviceKey) {
+    return undefined;
+  }
+
+  return `${serverUrl}/${deviceKey}`;
+};
+
 const normalizeSnapshot = (snapshot: HealthCheckSnapshot): HealthCheckSnapshot => ({
   ...snapshot,
   summary: {
@@ -59,6 +79,17 @@ const normalizeSnapshot = (snapshot: HealthCheckSnapshot): HealthCheckSnapshot =
           bark: snapshot.summary.notifications.bark
             ? {
                 enabled: snapshot.summary.notifications.bark.enabled,
+                url: buildBarkUrl({
+                  url:
+                    (snapshot.summary.notifications.bark as Record<string, unknown>)['url'] as string | undefined ??
+                    snapshot.summary.notifications.bark.url,
+                  serverUrl:
+                    (snapshot.summary.notifications.bark as Record<string, unknown>)['server-url'] as string | undefined ??
+                    snapshot.summary.notifications.bark.serverUrl,
+                  deviceKey:
+                    (snapshot.summary.notifications.bark as Record<string, unknown>)['device-key'] as string | undefined ??
+                    snapshot.summary.notifications.bark.deviceKey
+                }),
                 serverUrl:
                   (snapshot.summary.notifications.bark as Record<string, unknown>)['server-url'] as string | undefined ??
                   snapshot.summary.notifications.bark.serverUrl,
@@ -126,6 +157,7 @@ export const healthCheckApi = {
         bark: value.bark
           ? {
               enabled: value.bark.enabled,
+              url: value.bark.url,
               'server-url': value.bark.serverUrl,
               'device-key': value.bark.deviceKey,
               group: value.bark.group
@@ -143,6 +175,16 @@ export const healthCheckApi = {
               'subject-prefix': value.email.subjectPrefix
             }
           : undefined
+      }
+    }),
+  testBarkNotification: (value: HealthCheckNotifications['bark']) =>
+    apiClient.post<{ status: string }>('/health-check/notifications/bark/test', {
+      value: {
+        enabled: value?.enabled,
+        url: value?.url,
+        'server-url': value?.serverUrl,
+        'device-key': value?.deviceKey,
+        group: value?.group
       }
     })
 };

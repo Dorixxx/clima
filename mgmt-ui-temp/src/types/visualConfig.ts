@@ -63,8 +63,7 @@ export interface VisualHealthCheckProviderPolicy {
 
 export interface VisualHealthCheckNotifications {
   barkEnabled: boolean;
-  barkServerUrl: string;
-  barkDeviceKey: string;
+  barkUrl: string;
   barkGroup: string;
   emailEnabled: boolean;
   emailSmtpHost: string;
@@ -164,8 +163,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     providerPolicies: [],
     notifications: {
       barkEnabled: false,
-      barkServerUrl: '',
-      barkDeviceKey: '',
+      barkUrl: '',
       barkGroup: '',
       emailEnabled: false,
       emailSmtpHost: '',

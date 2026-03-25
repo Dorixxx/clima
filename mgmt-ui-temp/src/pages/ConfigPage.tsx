@@ -18,6 +18,7 @@ import {
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import { healthCheckApi } from '@/services/api/healthcheck';
 import { useNotificationStore, useAuthStore, useThemeStore } from '@/stores';
 import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
@@ -66,6 +67,7 @@ export function ConfigPage() {
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
+  const [barkTesting, setBarkTesting] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -249,6 +251,31 @@ export function ConfigPage() {
       t,
       visualDirty,
     ]
+  );
+
+  const handleTestBark = useCallback(
+    async (value: { enabled?: boolean; url?: string; group?: string }) => {
+      if (!value.url?.trim()) {
+        showNotification(t('health_check.bark_test_failed'), 'error');
+        return;
+      }
+
+      setBarkTesting(true);
+      try {
+        await healthCheckApi.testBarkNotification({
+          enabled: value.enabled,
+          url: value.url,
+          group: value.group,
+        });
+        showNotification(t('health_check.bark_test_sent'), 'success');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : t('health_check.bark_test_failed');
+        showNotification(message, 'error');
+      } finally {
+        setBarkTesting(false);
+      }
+    },
+    [showNotification, t]
   );
 
   // Search functionality
@@ -518,7 +545,9 @@ export function ConfigPage() {
               validationErrors={visualValidationErrors}
               hasPayloadValidationErrors={visualHasPayloadValidationErrors}
               disabled={disableControls || loading}
+              barkTesting={barkTesting}
               onChange={setVisualValues}
+              onTestBark={handleTestBark}
             />
           ) : (
             <div className={styles.sourceWorkspace}>

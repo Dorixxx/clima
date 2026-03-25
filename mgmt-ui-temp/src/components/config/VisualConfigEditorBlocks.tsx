@@ -408,7 +408,7 @@ export const HealthCheckProviderPoliciesEditor = memo(function HealthCheckProvid
     <div className={styles.blockStack}>
       {value.map((item, index) => (
         <div key={item.id} className={styles.ruleCard}>
-          <div className={styles.payloadRuleModelRow}>
+          <div className={styles.providerPolicyRow}>
             <input
               className="input"
               placeholder={t('config_management.visual.sections.health.provider_placeholder')}

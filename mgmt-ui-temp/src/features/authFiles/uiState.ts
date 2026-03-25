@@ -11,6 +11,7 @@ export type AuthFilesUiState = {
   pageSize?: number;
   regularPageSize?: number;
   compactPageSize?: number;
+  uploadConcurrency?: number;
   sortMode?: AuthFilesSortMode;
 };
 

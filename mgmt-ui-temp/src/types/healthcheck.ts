@@ -51,6 +51,7 @@ export interface HealthCheckSummary {
   notifications?: {
     bark?: {
       enabled?: boolean;
+      url?: string;
       serverUrl?: string;
       deviceKey?: string;
       group?: string;

@@ -1,11 +1,14 @@
 package management
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/healthcheck"
 )
 
 func (h *Handler) GetHealthCheck(c *gin.Context) {
@@ -145,6 +148,34 @@ func (h *Handler) PutHealthCheckNotifications(c *gin.Context) {
 	h.cfg.HealthCheck.Notifications = body.Value
 	h.cfg.SanitizeHealthCheck()
 	h.persist(c)
+}
+
+func (h *Handler) TestHealthCheckBarkNotification(c *gin.Context) {
+	var body struct {
+		Value config.HealthCheckBarkNotificationConfig `json:"value"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+
+	run := healthcheck.RunResult{}
+	if h != nil && h.healthChecker != nil {
+		snapshot := h.healthChecker.Snapshot()
+		run.Healthy = snapshot.Summary.LastRunHealthy
+		run.Unauthorized = snapshot.Summary.LastRunUnauthorized
+		run.ZeroQuota = snapshot.Summary.LastRunZeroQuota
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := healthcheck.SendBarkTestNotification(ctx, body.Value, run); err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "sent"})
 }
 
 func (h *Handler) updateHealthCheckAction(c *gin.Context, kind string, set func(string)) {

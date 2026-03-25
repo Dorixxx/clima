@@ -580,6 +580,17 @@ func (c *Checker) applyUnauthorizedAction(ctx context.Context, cfg *config.Confi
 	case "ignore":
 		return ActionIgnored
 	case "delete":
+		if !shouldDeleteUnauthorizedAuth(auth) {
+			auth.Disabled = true
+			auth.Status = coreauth.StatusDisabled
+			auth.StatusMessage = unauthorizedDisabledStatusMessage(auth)
+			auth.UpdatedAt = time.Now().UTC()
+			if _, err := manager.Update(ctx, auth); err != nil {
+				log.WithError(err).Warn("health check failed to disable unauthorized auth")
+				return ActionNone
+			}
+			return ActionDisabled
+		}
 		if err := manager.Delete(ctx, auth.ID); err != nil {
 			log.WithError(err).Warn("health check failed to delete unauthorized auth")
 			return ActionNone
@@ -588,7 +599,7 @@ func (c *Checker) applyUnauthorizedAction(ctx context.Context, cfg *config.Confi
 	default:
 		auth.Disabled = true
 		auth.Status = coreauth.StatusDisabled
-		auth.StatusMessage = "disabled by health check: unauthorized"
+		auth.StatusMessage = unauthorizedDisabledStatusMessage(auth)
 		auth.UpdatedAt = time.Now().UTC()
 		if _, err := manager.Update(ctx, auth); err != nil {
 			log.WithError(err).Warn("health check failed to disable unauthorized auth")
@@ -670,6 +681,41 @@ func isUnauthorized(auth *coreauth.Auth, err error) bool {
 		}
 	}
 	return false
+}
+
+func shouldDeleteUnauthorizedAuth(auth *coreauth.Auth) bool {
+	msg := unauthorizedAuthMessage(auth)
+	if msg == "" {
+		return false
+	}
+
+	return strings.Contains(msg, "authentication token has been invalidated") ||
+		strings.Contains(msg, "token has been invalidated")
+}
+
+func unauthorizedAuthMessage(auth *coreauth.Auth) string {
+	if auth == nil {
+		return ""
+	}
+	if auth.LastError != nil && strings.TrimSpace(auth.LastError.Message) != "" {
+		return strings.ToLower(strings.TrimSpace(auth.LastError.Message))
+	}
+	if strings.TrimSpace(auth.StatusMessage) != "" {
+		return strings.ToLower(strings.TrimSpace(auth.StatusMessage))
+	}
+	return ""
+}
+
+func unauthorizedDisabledStatusMessage(auth *coreauth.Auth) string {
+	msg := unauthorizedAuthMessage(auth)
+	switch {
+	case strings.Contains(msg, "token is expired"), strings.Contains(msg, "authentication has expired"), strings.Contains(msg, "access token has expired"):
+		return "disabled by health check: token expired, sign in again"
+	case strings.Contains(msg, "token has been invalidated"), strings.Contains(msg, "authentication token has been invalidated"):
+		return "disabled by health check: token invalidated, sign in again"
+	default:
+		return "disabled by health check: unauthorized"
+	}
 }
 
 func isZeroQuota(auth *coreauth.Auth, err error) bool {

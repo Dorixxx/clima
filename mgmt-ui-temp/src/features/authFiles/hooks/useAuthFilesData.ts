@@ -50,10 +50,11 @@ export type UseAuthFilesDataResult = {
 
 export type UseAuthFilesDataOptions = {
   refreshKeyStats: () => Promise<void>;
+  uploadConcurrency: number;
 };
 
 export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFilesDataResult {
-  const { refreshKeyStats } = options;
+  const { refreshKeyStats, uploadConcurrency } = options;
   const { t } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
 
@@ -192,16 +193,26 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       setUploading(true);
       let successCount = 0;
       const failed: { name: string; message: string }[] = [];
+      let nextIndex = 0;
+      const workerCount = Math.max(1, Math.min(uploadConcurrency, validFiles.length));
 
-      for (const file of validFiles) {
-        try {
-          await authFilesApi.upload(file);
-          successCount++;
-        } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          failed.push({ name: file.name, message: errorMessage });
+      const uploadWorker = async () => {
+        while (nextIndex < validFiles.length) {
+          const currentIndex = nextIndex;
+          nextIndex++;
+          const file = validFiles[currentIndex];
+          if (!file) continue;
+          try {
+            await authFilesApi.upload(file);
+            successCount++;
+          } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            failed.push({ name: file.name, message: errorMessage });
+          }
         }
-      }
+      };
+
+      await Promise.all(Array.from({ length: workerCount }, () => uploadWorker()));
 
       if (successCount > 0) {
         const suffix = validFiles.length > 1 ? ` (${successCount}/${validFiles.length})` : '';
@@ -221,7 +232,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       setUploading(false);
       event.target.value = '';
     },
-    [loadFiles, refreshKeyStats, showNotification, t]
+    [loadFiles, refreshKeyStats, showNotification, t, uploadConcurrency]
   );
 
   const handleDelete = useCallback(

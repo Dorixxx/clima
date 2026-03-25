@@ -222,6 +222,7 @@ type HealthCheckNotificationsConfig struct {
 // HealthCheckBarkNotificationConfig configures Bark push notifications.
 type HealthCheckBarkNotificationConfig struct {
 	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	URL       string `yaml:"url,omitempty" json:"url,omitempty"`
 	ServerURL string `yaml:"server-url,omitempty" json:"server-url,omitempty"`
 	DeviceKey string `yaml:"device-key,omitempty" json:"device-key,omitempty"`
 	Group     string `yaml:"group,omitempty" json:"group,omitempty"`
@@ -779,8 +780,9 @@ func (cfg *Config) SanitizeHealthCheck() {
 			cfg.HealthCheck.ProviderPolicies = sanitized
 		}
 	}
+	cfg.HealthCheck.Notifications.Bark.URL = strings.TrimSpace(cfg.HealthCheck.Notifications.Bark.URL)
 	cfg.HealthCheck.Notifications.Bark.ServerURL = strings.TrimSpace(cfg.HealthCheck.Notifications.Bark.ServerURL)
-	if cfg.HealthCheck.Notifications.Bark.ServerURL == "" {
+	if cfg.HealthCheck.Notifications.Bark.URL == "" && cfg.HealthCheck.Notifications.Bark.ServerURL == "" {
 		cfg.HealthCheck.Notifications.Bark.ServerURL = "https://api.day.app"
 	}
 	cfg.HealthCheck.Notifications.Bark.DeviceKey = strings.TrimSpace(cfg.HealthCheck.Notifications.Bark.DeviceKey)

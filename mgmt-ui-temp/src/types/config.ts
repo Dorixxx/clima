@@ -27,6 +27,7 @@ export interface HealthCheckConfig {
   notifications?: {
     bark?: {
       enabled?: boolean;
+      url?: string;
       serverUrl?: string;
       deviceKey?: string;
       group?: string;

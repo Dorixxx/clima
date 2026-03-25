@@ -23,7 +23,7 @@ interface HealthCheckState {
     value: Record<string, { unauthorizedAction?: 'delete' | 'disable' | 'ignore'; zeroQuotaAction?: 'disable' | 'ignore' }>
   ) => Promise<void>;
   setNotifications: (value: {
-    bark?: { enabled?: boolean; serverUrl?: string; deviceKey?: string; group?: string };
+    bark?: { enabled?: boolean; url?: string; serverUrl?: string; deviceKey?: string; group?: string };
     email?: {
       enabled?: boolean;
       smtpHost?: string;

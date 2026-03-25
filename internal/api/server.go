@@ -535,6 +535,7 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.GET("/health-check/notifications", s.mgmt.GetHealthCheckNotifications)
 		mgmt.PUT("/health-check/notifications", s.mgmt.PutHealthCheckNotifications)
 		mgmt.PATCH("/health-check/notifications", s.mgmt.PutHealthCheckNotifications)
+		mgmt.POST("/health-check/notifications/bark/test", s.mgmt.TestHealthCheckBarkNotification)
 
 		mgmt.GET("/debug", s.mgmt.GetDebug)
 		mgmt.PUT("/debug", s.mgmt.PutDebug)

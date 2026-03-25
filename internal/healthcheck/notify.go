@@ -46,13 +46,21 @@ func (c *Checker) notifyRunCompleted(cfg *config.Config, run RunResult) {
 }
 
 func sendBarkNotification(ctx context.Context, cfg config.HealthCheckBarkNotificationConfig, run RunResult) error {
-	serverURL := strings.TrimRight(strings.TrimSpace(cfg.ServerURL), "/")
-	deviceKey := strings.Trim(strings.TrimSpace(cfg.DeviceKey), "/")
-	if serverURL == "" || deviceKey == "" {
-		return fmt.Errorf("bark server-url or device-key is empty")
+	title, body := barkNotificationMessage(run, false)
+	return sendBarkPayload(ctx, cfg, title, body)
+}
+
+func SendBarkTestNotification(ctx context.Context, cfg config.HealthCheckBarkNotificationConfig, run RunResult) error {
+	title, body := barkNotificationMessage(run, true)
+	return sendBarkPayload(ctx, cfg, title, body)
+}
+
+func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotificationConfig, title string, body string) error {
+	endpoint, err := barkEndpoint(cfg)
+	if err != nil {
+		return err
 	}
 
-	title, body := notificationMessage(run)
 	payload := map[string]string{
 		"title": title,
 		"body":  body,
@@ -66,7 +74,7 @@ func sendBarkNotification(ctx context.Context, cfg config.HealthCheckBarkNotific
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, serverURL+"/"+url.PathEscape(deviceKey), bytes.NewReader(rawBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(rawBody))
 	if err != nil {
 		return err
 	}
@@ -82,6 +90,20 @@ func sendBarkNotification(ctx context.Context, cfg config.HealthCheckBarkNotific
 		return fmt.Errorf("bark returned %s", resp.Status)
 	}
 	return nil
+}
+
+func barkEndpoint(cfg config.HealthCheckBarkNotificationConfig) (string, error) {
+	if rawURL := strings.TrimRight(strings.TrimSpace(cfg.URL), "/"); rawURL != "" {
+		return rawURL, nil
+	}
+
+	serverURL := strings.TrimRight(strings.TrimSpace(cfg.ServerURL), "/")
+	deviceKey := strings.Trim(strings.TrimSpace(cfg.DeviceKey), "/")
+	if serverURL == "" || deviceKey == "" {
+		return "", fmt.Errorf("bark url or server-url/device-key is empty")
+	}
+
+	return serverURL + "/" + url.PathEscape(deviceKey), nil
 }
 
 func sendEmailNotification(ctx context.Context, cfg config.HealthCheckEmailNotificationConfig, run RunResult) error {
@@ -100,7 +122,7 @@ func sendEmailNotification(ctx context.Context, cfg config.HealthCheckEmailNotif
 		return fmt.Errorf("email from is empty")
 	}
 
-	title, body := notificationMessage(run)
+	title, body := emailNotificationMessage(run)
 	subjectPrefix := strings.TrimSpace(cfg.SubjectPrefix)
 	if subjectPrefix == "" {
 		subjectPrefix = "[CLIProxyAPI]"
@@ -135,7 +157,30 @@ func sendEmailNotification(ctx context.Context, cfg config.HealthCheckEmailNotif
 	}
 }
 
-func notificationMessage(run RunResult) (string, string) {
+func barkNotificationMessage(run RunResult, isTest bool) (string, string) {
+	title := "健康检查完成"
+	switch {
+	case isTest:
+		title = "Bark 测试推送"
+	case run.Stopped:
+		title = "健康检查已停止"
+	case run.Unauthorized > 0 || run.ZeroQuota > 0 || run.Errors > 0:
+		title = "健康检查发现异常"
+	}
+
+	lines := []string{
+		fmt.Sprintf("健康账户：%d", run.Healthy),
+		fmt.Sprintf("401 账户：%d", run.Unauthorized),
+		fmt.Sprintf("余额为 0 账户：%d", run.ZeroQuota),
+	}
+	if isTest {
+		lines = append([]string{"这是一条 Bark 测试推送。"}, lines...)
+	}
+
+	return title, strings.Join(lines, "\n")
+}
+
+func emailNotificationMessage(run RunResult) (string, string) {
 	status := "completed"
 	if run.Errors > 0 {
 		status = "completed with errors"
