@@ -94,7 +94,24 @@ func sendBarkPayload(ctx context.Context, cfg config.HealthCheckBarkNotification
 
 func barkEndpoint(cfg config.HealthCheckBarkNotificationConfig) (string, error) {
 	if rawURL := strings.TrimRight(strings.TrimSpace(cfg.URL), "/"); rawURL != "" {
-		return rawURL, nil
+		parsed, err := url.Parse(rawURL)
+		if err != nil {
+			return "", fmt.Errorf("invalid bark url: %w", err)
+		}
+		segments := make([]string, 0, 4)
+		for _, part := range strings.Split(parsed.Path, "/") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			segments = append(segments, part)
+		}
+		if len(segments) == 0 {
+			return "", fmt.Errorf("invalid bark url: missing device key")
+		}
+		parsed.Path = "/" + url.PathEscape(segments[0])
+		parsed.RawPath = ""
+		return strings.TrimRight(parsed.String(), "/"), nil
 	}
 
 	serverURL := strings.TrimRight(strings.TrimSpace(cfg.ServerURL), "/")
